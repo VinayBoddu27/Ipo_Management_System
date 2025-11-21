@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>IPO Allotment Status - Inline Result UX</title>
+<style>
+  *{box-sizing:border-box;font-family:"Poppins",sans-serif}
+  body{margin:0;min-height:100vh;background:linear-gradient(180deg,#030712,#0b1220);display:flex;justify-content:center;align-items:center;color:#fff;overflow:auto;padding:28px}
+  /* background visuals */
+  #marketBg{position:fixed;top:0;left:0;width:200%;height:100%;background-image:repeating-linear-gradient(90deg,rgba(255,255,255,0.05)0,rgba(255,255,255,0.05)2px,transparent 2px,transparent 80px);animation:moveBars 12s linear infinite;z-index:1;transition:opacity .35s}
+  @keyframes moveBars{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  #marketDots{position:fixed;width:100%;height:100%;overflow:hidden;z-index:1;pointer-events:none;transition:opacity .35s}
+  .dot{position:absolute;width:6px;height:6px;border-radius:50%;background:#00ff9f;opacity:.4;animation:floatDots 6s linear infinite}
+  @keyframes floatDots{0%{transform:translateY(0) scale(1)}50%{transform:translateY(-30px) scale(1.4)}100%{transform:translateY(0) scale(1)}}
+
+  /* layout container */
+  .page-wrap{z-index:10; width:100%; max-width:1100px; margin:0 auto;}
+  .container{background:rgba(255,255,255,0.03);backdrop-filter:blur(8px);border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,0.6);display:flex;overflow:hidden;border:1px solid rgba(0,255,153,0.06)}
+  .left{flex:1;padding:34px;background:radial-gradient(circle at top left,#07223b,#000);display:flex;align-items:center;justify-content:center}
+  .chart{position:relative;width:100%;height:300px;overflow:hidden;border-radius:8px}
+  .bar{position:absolute;bottom:0;width:6px;border-radius:3px;animation:barsUpDown 1.4s infinite ease-in-out;background:linear-gradient(180deg,#00ff9f,#0093e9)}
+  @keyframes barsUpDown{0%,100%{height:40px}50%{height:180px}}
+
+  .right{flex:1;padding:36px 34px;background:rgba(0,0,0,0.3);position:relative;min-height:420px}
+  .title{color:#00d4ff;text-align:center;margin-bottom:20px;font-weight:700;text-shadow:0 0 10px rgba(0,212,255,0.12);font-size:22px}
+
+  label{display:block;font-size:14px;margin-bottom:8px;color:#cfd9e3}
+  select,input[type="text"]{width:100%;padding:10px 12px;font-size:14px;border:none;border-radius:8px;background:rgba(255,255,255,0.04);color:#bfffd3}
+  .radio-row{display:flex;gap:12px;margin:14px 0;color:#e6f7eb}
+
+  #submitBtn{display:block;width:100%;padding:12px;background:linear-gradient(90deg,#00ff9f,#00d4ff);color:#022;border:none;border-radius:8px;cursor:pointer;font-weight:700;transition:transform .12s}
+  #submitBtn:active{transform:translateY(1px)}
+
+  /* inline result (now part of normal flow) */
+  .result-inline{margin-top:18px;pointer-events:auto;transition:transform .25s,opacity .25s}
+  .card{background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(0,0,0,0.35));border-radius:10px;padding:14px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 8px 30px rgba(0,0,0,0.6)}
+  .card.success h3{color:#00ff9f;margin:6px 0;font-size:18px}
+  .card.fail h3{color:#ff7b8a;margin:6px 0;font-size:18px}
+  .card .message{color:#dfeff7;font-size:13px;margin:6px 0 12px}
+
+  .tick{width:52px;height:52px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin:0 auto 8px;background:linear-gradient(90deg,#003b2a,#002b20);border:3px solid rgba(0,255,159,0.12)}
+  .sad{width:52px;height:52px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin:0 auto 8px;background:linear-gradient(90deg,#420019,#2b0012);border:3px solid rgba(255,75,92,0.12)}
+
+  .btn-row{display:flex;gap:10px;justify-content:center;margin-top:8px}
+  .btn-row button{padding:8px 12px;border-radius:6px;border:none;cursor:pointer}
+
+  /* small preview under the form after submit */
+  .moved-chart-wrap{margin-top:16px;border-radius:10px;overflow:hidden;background:rgba(255,255,255,0.02);padding:10px;border:1px solid rgba(255,255,255,0.02)}
+  .moved-chart-wrap .chart{height:120px}
+
+  /* hide background and left visuals when hiding is desired */
+  .hide-visuals #marketBg,.hide-visuals #marketDots{opacity:0;pointer-events:none;display:none}
+  .hide-visuals .left{display:none}
+
+  @media(max-width:900px){
+    .container{flex-direction:column}
+    .left{display:none}
+    .right{min-height:unset;padding:22px}
+  }
+</style>
+</head>
+<body>
+
+<div id="marketBg"></div>
+<div id="marketDots"></div>
+
+<div class="page-wrap">
+  <div class="container" id="mainContainer">
+    <div class="left" id="leftChartParent" aria-hidden="true">
+      <div class="chart" id="chartArea" aria-hidden="true"></div>
+    </div>
+
+    <div class="right" id="rightPanel" aria-live="polite">
+      <div class="title">IPO Allotment Status</div>
+
+      <div class="form-group">
+        <label for="ipo">Select IPO</label>
+        <select id="ipo" aria-label="Select IPO">
+          <option value="">Select IPO</option>
+          <option>Groww</option>
+          <option>LG Electronics</option>
+          <option>Bajaj Housing Finance</option>
+          <option>Tata Capital</option>
+        </select>
+      </div>
+
+      <div class="radio-row" role="radiogroup" aria-label="Search type">
+        <label><input type="radio" name="searchType" value="appNo"> Application No</label>
+        <label><input type="radio" name="searchType" value="demat"> Demat Account</label>
+        <label><input type="radio" name="searchType" value="pan" checked> PAN</label>
+      </div>
+
+      <div class="form-group">
+        <label for="pan">Enter PAN No</label>
+        <input type="text" id="pan" placeholder="Enter your PAN number" />
+      </div>
+
+      <button id="submitBtn">Submit</button>
+
+      <!-- result will be inserted here inline (not overlay) -->
+      <div id="resultInlineArea" class="result-inline" aria-hidden="true"></div>
+
+      <!-- small preview placeholder (appears under result after submit) -->
+      <div id="movedChartPlaceholder" aria-hidden="true"></div>
+    </div>
+  </div>
+</div>
+
+<!-- confetti container -->
+<div id="confetti" class="confetti" aria-hidden="true"></div>
+
+<script>
+  // preview image path (your uploaded image will be transformed by platform)
+  const previewImagePath = '/mnt/data/e5101880-266e-4204-9a6f-88fcf33092b0.png';
+
+  // background dots
+  const dotsContainer = document.getElementById('marketDots');
+  for (let i = 0; i < 30; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'dot';
+    dot.style.left = Math.random() * 100 + '%';
+    dot.style.top = Math.random() * 100 + '%';
+    dot.style.animationDelay = Math.random() * 4 + 's';
+    dotsContainer.appendChild(dot);
+  }
+
+  // left chart bars
+  const chartArea = document.getElementById('chartArea');
+  for (let i = 0; i < 40; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    bar.style.left = (i * 10) + 'px';
+    bar.style.animationDelay = (i * 0.08) + 's';
+    bar.style.height = (40 + Math.random() * 120) + 'px';
+    if (Math.random() > 0.6) {
+      bar.style.background = 'linear-gradient(180deg,#ff4b5c,#ffb347)';
+    }
+    chartArea.appendChild(bar);
+  }
+
+  // elements
+  const submitBtn = document.getElementById('submitBtn');
+  const resultInlineArea = document.getElementById('resultInlineArea');
+  const confettiRoot = document.getElementById('confetti');
+  const movedChartPlaceholder = document.getElementById('movedChartPlaceholder');
+
+  submitBtn.addEventListener('click', handleSubmit);
+
+  function handleSubmit() {
+    const ipo = document.getElementById('ipo').value.trim();
+    const pan = document.getElementById('pan').value.trim();
+    if (!ipo || !pan) {
+      alert('Please select IPO and enter PAN');
+      return;
+    }
+
+    // hide background visuals entirely so nothing shows through
+    document.body.classList.add('hide-visuals');
+
+    // move a small preview under the result (so left visuals don't overlap)
+    showSmallPreview();
+
+    // decide success condition (Groww = success)
+    const success = ipo.toLowerCase() === 'groww';
+
+    // render inline result (not overlay)
+    renderInlineResult(success, ipo, pan);
+  }
+
+  function renderInlineResult(success, ipo, pan) {
+    resultInlineArea.setAttribute('aria-hidden', 'false');
+    resultInlineArea.innerHTML = ''; // clear
+
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    if (success) {
+      card.innerHTML = `
+        <div class="tick" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M9.00039 16.17L4.83039 12.0L3.41039 13.41L9.00039 19.0L21.0004 7.0L19.5904 5.59L9.00039 16.17Z"/></svg>
+        </div>
+        <h3>Congratulations — you got an allotment!</h3>
+        <div class="message">Good news! Your application for <strong>${escapeHtml(ipo)}</strong> with PAN <strong>${escapeHtml(pan)}</strong> has been allotted. Check your demat account for details.</div>
+        <div class="btn-row">
+          <button id="viewBtn">View Details</button>
+          <button id="closeBtn" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.06)">Close</button>
+        </div>
+      `;
+      resultInlineArea.appendChild(card);
+      document.getElementById('viewBtn').addEventListener('click', () => alert('Opening allotment details (demo)'));
+      document.getElementById('closeBtn').addEventListener('click', restoreUI);
+
+      launchConfetti();
+    } else {
+      card.innerHTML = `
+        <div class="sad" aria-hidden="true">
+          <svg viewBox="0 0 24 24" style="width:28px;height:28px;fill:#ff7b8a"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm3 8.5c.83 0 1.5.67 1.5 1.5S15.83 13.5 15 13.5 13.5 12.83 13.5 12s.67-1.5 1.5-1.5zM9 11c.83 0 1.5.67 1.5 1.5S9.83 14 9 14s-1.5-.67-1.5-1.5S8.17 11 9 11zm3.5 5c-1.66 0-3.14-.84-4-2.12.87-.87 2.02-1.38 3.32-1.38 1.3 0 2.45.51 3.32 1.38-.86 1.28-2.34 2.12-4.0 2.12z"/></svg>
+        </div>
+        <h3>Better luck next time</h3>
+        <div class="message">Unfortunately, <strong>${escapeHtml(ipo)}</strong> did not result in an allotment for PAN <strong>${escapeHtml(pan)}</strong>. Try again or apply to other IPOs.</div>
+        <div class="btn-row">
+          <button id="tryBtn">Try Another IPO</button>
+          <button id="closeFail" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.06)">Close</button>
+        </div>
+      `;
+      resultInlineArea.appendChild(card);
+      document.getElementById('tryBtn').addEventListener('click', () => {
+        // restore visuals so user can try another (keep preview visible)
+        restoreUI(true);
+        document.getElementById('ipo').focus();
+      });
+      document.getElementById('closeFail').addEventListener('click', restoreUI);
+    }
+
+    // scroll the result into view for better UX
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function showSmallPreview() {
+    movedChartPlaceholder.setAttribute('aria-hidden', 'false');
+    movedChartPlaceholder.innerHTML = ''; // clear
+
+    const wrap = document.createElement('div');
+    wrap.className = 'moved-chart-wrap';
+    }
+
+    // optional static preview image of your left art (uses your uploaded file)
+    
+const smallChart = document.createElement('div');
+    smallChart.className = 'chart';
+    smallChart.style.height = '120px';
+    smallChart.style.minHeight = '120px';
+    smallChart.style.maxHeight = '140px';
+    for (let i = 0; i < 18; i++) {
+      const b = document.createElement('div');
+      b.className = 'bar';
+      b.style.left = (i * 10) + 'px';
+      b.style.height = (30 + Math.random() * 90) + 'px';
+      if (Math.random() > 0.6) b.style.background = 'linear-gradient(180deg,#ff4b5c,#ffb347)';
+      smallChart.appendChild(b);
+
+    const img = document.createElement('img');
+    img.src = previewImagePath;
+    img.alt = 'preview image';
+    img.style.width = '100%';
+    img.style.marginTop = '10px';
+    img.style.borderRadius = '6px';
+    img.style.display = 'block';
+    img.style.border = '1px solid rgba(255,255,255,0.03)';
+
+
+    wrap.appendChild(smallChart);
+    wrap.appendChild(img);
+    movedChartPlaceholder.appendChild(wrap);
+  }
+
+  // confetti (same as before)
+  function launchConfetti() {
+    const colors = ['#00ff9f','#00d4ff','#ffdd57','#ff7b8a','#9b8cff'];
+    const count = 50;
+    const w = window.innerWidth;
+    for (let i = 0; i < count; i++) {
+      const el = document.createElement('div');
+      el.className = 'piece';
+      el.style.position = 'fixed';
+      el.style.width = (8 + Math.random()*12) + 'px';
+      el.style.height = (10 + Math.random()*14) + 'px';
+      el.style.background = colors[Math.floor(Math.random()*colors.length)];
+      el.style.left = Math.random()*w + 'px';
+      el.style.top = (-20 - Math.random()*80) + 'px';
+      el.style.zIndex = '9999';
+      document.body.appendChild(el);
+      animateConfetti(el, 1400 + Math.random()*1600, (Math.random()>0.5?1:-1)*(20 + Math.random()*40));
+    }
+    setTimeout(() => {
+      document.querySelectorAll('.piece').forEach(e => e.remove());
+    }, 4000);
+  }
+  function animateConfetti(el, dur, swing) {
+    const start = performance.now();
+    const startX = parseFloat(el.style.left);
+    const endY = window.innerHeight + 200;
+    function frame(now) {
+      const t = Math.min(1, (now - start) / dur);
+      const ease = 1 - Math.pow(1 - t, 3);
+      const x = startX + Math.sin(t * Math.PI * 2) * swing;
+      const y = (parseFloat(el.style.top) || -50) + (endY + 100) * ease;
+      el.style.transform = `translate(${x - startX}px, ${y}px) rotate(${t*720}deg)`;
+      el.style.opacity = `${1 - t*0.9}`;
+      if (t < 1) requestAnimationFrame(frame); else el.remove();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // restore UI
+  function restoreUI(keepPreview) {
+    // show background visuals again
+    document.body.classList.remove('hide-visuals');
+    // remove result and preview unless keepPreview is true
+    document.getElementById('resultInlineArea').innerHTML = '';
+    document.getElementById('resultInlineArea').setAttribute('aria-hidden', 'true');
+    if (!keepPreview) {
+      movedChartPlaceholder.innerHTML = '';
+      movedChartPlaceholder.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; });
+  }
+</script>
+</body>
+</html>
+
