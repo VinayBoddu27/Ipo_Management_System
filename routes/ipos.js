@@ -1,52 +1,30 @@
 const express = require('express');
 const router = express.Router();
-const IPO = require('../models/ipo');
+const IPOIssue = require('../models/ipo_issue');
+const Application = require('../models/application');
+const { createTransaction } = require('../services/payment');
 
-// create IPO
-router.post('/', async (req, res) => {
+function validPAN(pan) {
+  return /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan);
+}
+
+router.post('/apply', async (req, res) => {
   try {
-    const ipo = new IPO(req.body);
-    await ipo.save();
-    res.status(201).json(ipo);
+    const { investorPAN, ipoIssue, quantity } = req.body;
+    if (!validPAN(investorPAN)) return res.status(400).json({ error: 'Invalid PAN format' });
+    const ipo = await IPOIssue.findById(ipoIssue);
+    const now = new Date();
+    if (!ipo || now < ipo.openDate || now > ipo.closeDate) {
+      return res.status(400).json({ error: 'IPO not open for application' });
+    }
+    const app = await Application.create({ investorPAN, ipoIssue, quantity });
+    // create a transaction stub (amount = listingPrice * qty * lotsize if available)
+    const amount = (ipo.listingPrice || (ipo.priceBand && ipo.priceBand.low) || 0) * quantity;
+    const tx = await createTransaction({ applicationId: app._id, investorPAN, amount, type: 'DEBIT' });
+    return res.status(201).json({ application: app, transaction: tx });
   } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-// list IPOs (populate company)
-router.get('/', async (req, res) => {
-  const ipos = await IPO.find().populate('company').sort({ openDate: -1 });
-  res.json(ipos);
-});
-
-// get one IPO
-router.get('/:id', async (req, res) => {
-  try {
-    const ipo = await IPO.findById(req.params.id).populate('company');
-    if (!ipo) return res.status(404).json({ error: 'not found' });
-    res.json(ipo);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-// update IPO
-router.put('/:id', async (req, res) => {
-  try {
-    const ipo = await IPO.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    res.json(ipo);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-// delete
-router.delete('/:id', async (req, res) => {
-  try {
-    await IPO.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
