@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>IPO Allotment Status - Demo</title>
+
+  <!-- Minimal CSS kept inline for single-file deployment -->
+  <style>
+    *{box-sizing:border-box;font-family:Inter,system-ui,Arial,sans-serif}
+    body{margin:0;background:#071021;color:#e6f7ef;padding:24px;display:flex;justify-content:center}
+    .wrap{width:100%;max-width:1100px}
+    .container{display:flex;gap:18px;background:rgba(255,255,255,0.03);padding:20px;border-radius:12px;overflow:hidden}
+    .panel{flex:1;min-width:300px}
+    .left{display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#07162a,#000);padding:18px;border-radius:10px}
+    .chart{width:100%;height:260px;border-radius:8px;position:relative;overflow:hidden}
+    .bar{position:absolute;bottom:0;width:6px;border-radius:3px;background:linear-gradient(180deg,#00ff9f,#0093e9)}
+    .title{color:#9ee9ff;font-weight:700;text-align:center;margin-bottom:12px}
+    label{display:block;font-size:13px;color:#cfe9e3;margin-top:8px}
+    select,input[type="text"]{width:100%;padding:10px;border-radius:8px;border:none;background:rgba(255,255,255,0.02);color:#dff9ef;margin-top:6px}
+    .radio-row{display:flex;gap:10px;margin-top:10px}
+    button#submitBtn{display:block;width:100%;padding:12px;border-radius:8px;border:none;margin-top:12px;background:linear-gradient(90deg,#00ff9f,#00d4ff);color:#022;font-weight:700;cursor:pointer}
+    .result-inline{margin-top:14px}
+    .card{padding:12px;border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(0,0,0,0.35));border:1px solid rgba(255,255,255,0.03)}
+    .tick,.sad{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 8px}
+    .tick{background:linear-gradient(90deg,#003b2a,#002b20);border:3px solid rgba(0,255,159,0.12)}
+    .sad{background:linear-gradient(90deg,#420019,#2b0012);border:3px solid rgba(255,75,92,0.12)}
+    .btn-row{display:flex;gap:8px;justify-content:center;margin-top:10px}
+    .moved-chart-wrap{margin-top:12px;padding:10px;border-radius:8px;background:rgba(255,255,255,0.01)}
+    @media (max-width:900px){ .container{flex-direction:column} .left{display:none} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="container" id="mainContainer">
+      <!-- left visuals (purely decorative) -->
+      <div class="panel left" id="leftVisuals" aria-hidden="true">
+        <div class="chart" id="leftChart"></div>
+      </div>
+
+      <!-- right panel: form + inline result -->
+      <div class="panel right" id="rightPanel" aria-live="polite">
+        <div class="title">IPO Allotment Status</div>
+
+        <div class="form-section">
+          <label for="ipo">Select IPO</label>
+          <select id="ipo" aria-label="select-ipo">
+            <option value="">Select IPO</option>
+            <option>Groww</option>
+            <option>LG Electronics</option>
+            <option>Bajaj Housing Finance</option>
+            <option>Tata Capital</option>
+          </select>
+
+          <div class="radio-row" role="radiogroup" aria-label="search-type">
+            <label><input type="radio" name="searchType" value="appNo"> Application No</label>
+            <label><input type="radio" name="searchType" value="demat"> Demat Account</label>
+            <label><input type="radio" name="searchType" value="pan" checked> PAN</label>
+          </div>
+
+          <label for="pan">Enter PAN No</label>
+          <input type="text" id="pan" placeholder="ABCDE1234F" />
+
+          <button id="submitBtn" type="button">Submit</button>
+        </div>
+
+        <!-- result will be injected here inline -->
+        <div id="resultInlineArea" class="result-inline" aria-hidden="true"></div>
+
+        <!-- small preview placeholder (appears after submit) -->
+        <div id="movedChartPlaceholder" class="moved-chart-wrap" aria-hidden="true"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- app.js (separated file) -->
+  <script src="./app.js"></script>
+</body>
+</html>
