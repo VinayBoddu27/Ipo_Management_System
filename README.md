@@ -193,7 +193,7 @@ This project is open-source under the MIT License.
 
 ## 👨‍💻 Author
 
-**Nandanavanam Teja Uma Mahesh**
+**Vinay Kumar Boddu**
 Developer | Researcher | Learner
 
 ---
