@@ -198,9 +198,3 @@ Developer | Researcher | Learner
 
 ---
 
-If you'd like, I can also:
-
-* Add code examples for every collection
-* Add API documentation for all routes
-* Create a full admin dashboard UI
-* Prepare the complete GitHub project structure
