@@ -1,11 +1,13 @@
 const mongoose = require('mongoose');
 
-const applicationSchema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  ipo: { type: mongoose.Schema.Types.ObjectId, ref: 'IPO', required: true },
-  appliedShares: { type: Number, required: true },
-  applicationDate: { type: Date, default: Date.now },
-  status: { type: String, default: 'pending' } // pending, allotted, rejected
-});
+const ApplicationSchema = new mongoose.Schema({
+  investorPAN: { type: String, required: true, trim: true },
+  ipoIssue: { type: mongoose.Schema.Types.ObjectId, ref: 'IPOIssue', required: true },
+  quantity: { type: Number, required: true, min: 1 },
+  status: { type: String, enum: ['APPLIED','ALLOTTED','REFUNDED'], default: 'APPLIED' },
+  appliedAt: { type: Date, default: Date.now }
+}, { timestamps: true });
 
-module.exports = mongoose.model('Application', applicationSchema);
+ApplicationSchema.index({ investorPAN: 1 });
+
+module.exports = mongoose.model('Application', ApplicationSchema);
